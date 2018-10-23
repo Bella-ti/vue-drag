@@ -2,14 +2,8 @@
   <div>
     <!-- 多窗口拖拽实现 -->
     <div class="map-box">
-      <Drag :areaClassname="'map-box'">
-        <H value="111" color="red" :active='true'></H>
-      </Drag>
-      <Drag :areaClassname="'map-box'">
-        <H  value="222" color="blue"></H>
-      </Drag>
-      <Drag :areaClassname="'map-box'">
-        <H  value="333" color="pink"></H>
+       <Drag :areaClassname="'map-box'" v-for="(item,j) in videolist" :key="j" @update:activedIndex="setIndex(j)" :index="activeIndex">
+        <H :value="item.value" :color="item.color"></H>
       </Drag>
     </div>
   </div>
@@ -23,6 +17,35 @@ export default {
   components: {
     Drag,
     H
+  },
+  data () {
+    return {
+      activeIndex: 1,
+      videolist: [
+        {
+          value: '111',
+          color: 'red'
+        },
+        {
+          value: '222',
+          color: 'blue'
+        },
+        {
+          value: '333',
+          color: 'yellow'
+        },
+        {
+          value: '444',
+          color: 'pink'
+        }
+      ]
+    }
+  },
+  methods: {
+    setIndex (i) {
+      console.log(i, 'setIndex')
+      this.activeIndex = i
+    }
   }
 }
 </script>

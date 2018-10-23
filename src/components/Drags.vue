@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-container" >
+  <div class="modal-container" @click="setIndex" :style="{zIndex: index + 1}">
     <!-- 可兼容多个同时拖拽子组件 -->
     <slot></slot>
   </div>
@@ -19,6 +19,10 @@ export default {
       require: true,
       type: String,
       default: ''
+    },
+    index: {
+      type: Number | String,
+      default: 1
     }
   },
   mounted () {
@@ -26,6 +30,9 @@ export default {
     this.move()
   },
   methods: {
+    setIndex () {
+      this.$emit('update:activedIndex', this.index)
+    },
     move () {
       this.isMove = false
       this.$el.addEventListener('mousedown', this.handleMouseDown)
@@ -34,7 +41,6 @@ export default {
     },
     handleMouseDown (e) {
       this.isMove = true
-      this.$el.style.zIndex = '1000'
       this.positionX = e.pageX - parseInt(this.$el.offsetLeft)
       this.positionY = e.pageY - parseInt(this.$el.offsetTop)
     },
@@ -62,7 +68,7 @@ export default {
     },
     handleMoveStatus () {
       this.isMove = false
-      this.$el.style.zIndex = '999'
+      // this.$el.style.zIndex = '999'
     }
   },
   beforeDestroy () {
