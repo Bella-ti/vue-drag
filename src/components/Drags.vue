@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-container" @click="setIndex" :style="{zIndex: index + 1}">
+  <div class="modal-container" @click="setIndex" :style="{zIndex: active?index + 1:index-1}">
     <!-- 可兼容多个同时拖拽子组件 -->
     <slot></slot>
   </div>
@@ -20,18 +20,36 @@ export default {
       type: String,
       default: ''
     },
+    // 根据 active 和 index 来设置 z-index 值
     index: {
       type: Number | String,
       default: 1
+    },
+    active: {
+      type: Boolean,
+      default: false
+    },
+    position: {
+      type: Object,
+      default: () => {
+        return {
+          left: 0,
+          right: 0
+        }
+      }
     }
   },
   mounted () {
     this.box = this.$parent.$el.querySelector('.' + this.areaClassname)
+    if (this.position) {
+      this.$el.style.left = this.position.left + 'px'
+      this.$el.style.top = this.position.top + 'px'
+    }
     this.move()
   },
   methods: {
     setIndex () {
-      this.$emit('update:activedIndex', this.index)
+      this.$emit('update:activedIndex')
     },
     move () {
       this.isMove = false
@@ -41,6 +59,7 @@ export default {
     },
     handleMouseDown (e) {
       this.isMove = true
+      this.$emit('update:activedIndex')
       this.positionX = e.pageX - parseInt(this.$el.offsetLeft)
       this.positionY = e.pageY - parseInt(this.$el.offsetTop)
     },
@@ -68,7 +87,6 @@ export default {
     },
     handleMoveStatus () {
       this.isMove = false
-      // this.$el.style.zIndex = '999'
     }
   },
   beforeDestroy () {
