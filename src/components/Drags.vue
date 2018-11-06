@@ -1,10 +1,18 @@
 <template>
+  <!-- 可兼容多个窗口时的拖拽 -->
   <div class="modal-container" @click="setIndex" :style="{zIndex: active?index + 1:index-1}">
-    <!-- 可兼容多个同时拖拽子组件 -->
     <slot></slot>
   </div>
 </template>
 <script>
+/**
+ * boxSize 可拖拽区域大小,该大小相较于父元素而言
+ * areaClassname 可拖拽的区域的classname,为该组件的父级元素 
+ * index 设置的z-index
+ * active 是否为焦点窗口
+ * position 窗口默认显示位置
+ * $emit('setzIndex') 触发点击事件
+ */
 export default {
   data () {
     return {
@@ -15,8 +23,16 @@ export default {
     }
   },
   props: {
+    boxSize: {
+      type: Object,
+      default: () => {
+        return {
+          width: 0,
+          height: 0
+        }
+      }
+    },
     areaClassname: {
-      require: true,
       type: String,
       default: ''
     },
@@ -47,39 +63,58 @@ export default {
     }
     this.move()
   },
+  computed: {
+    boxW() {
+      if (this.boxSize.width && this.boxSize.height) {
+        return this.boxSize.width
+      } else if (this.box) {
+        return this.box.clientWidth
+      } else {
+        return window.innerWidth
+      }
+    },
+    boxH() {
+      if (this.boxSize.width && this.boxSize.height) {
+        return this.boxSize.height
+      } else if (this.box) {
+        return this.box.clientHeight
+      } else {
+        return window.innerHeight - 72
+      }
+    }
+  },
   methods: {
     setIndex () {
-      this.$emit('update:activedIndex')
+      this.$emit('setzIndex')
     },
     move () {
       this.isMove = false
-      this.$el.addEventListener('mousedown', this.handleMouseDown)
-      document.addEventListener('mousemove', this.handleMouseMove)
-      document.addEventListener('mouseup', this.handleMoveStatus)
+      this.$el.addEventListener('mousedown', this.handleMouseDown, true)
+      document.addEventListener('mousemove', this.handleMouseMove, true)
+      document.addEventListener('mouseup', this.handleMoveStatus, true)
     },
     handleMouseDown (e) {
       this.isMove = true
-      this.$emit('update:activedIndex')
-      this.positionX = e.pageX - parseInt(this.$el.offsetLeft)
-      this.positionY = e.pageY - parseInt(this.$el.offsetTop)
+      this.$emit('setzIndex')
+      this.positionX = e.clientX - parseInt(this.$el.offsetLeft)
+      this.positionY = e.clientY - parseInt(this.$el.offsetTop)
     },
     handleMouseMove (e) {
-      const boxW = this.box.offsetWidth
-      const boxH = this.box.offsetHeight
-      const tarW = this.$el.offsetWidth
-      const tarH = this.$el.offsetHeight
       if (this.isMove) {
-        var left = e.pageX - this.positionX
-        var top = e.pageY - this.positionY
+        e = window.event || e
+        const tarW = this.$el.scrollWidth
+        const tarH = this.$el.scrollHeight
+        var left = e.clientX - this.positionX
+        var top = e.clientY - this.positionY
         if (left <= 0) {
           left = 0
-        } else if (left >= boxW - tarW) {
-          left = boxW - tarW
+        } else if (left >= this.boxW - tarW) {
+          left = this.boxW - tarW
         }
         if (top <= 0) {
           top = 0
-        } else if (top >= boxH - tarH) {
-          top = boxH - tarH
+        } else if (top >= this.boxH - tarH) {
+          top = this.boxH - tarH
         }
         this.$el.style.left = left + 'px'
         this.$el.style.top = top + 'px'
@@ -93,6 +128,7 @@ export default {
     this.$el.removeEventListener('mousedown', this.handleMouseDown)
     document.removeEventListener('mousemove', this.handleMouseMove)
     document.removeEventListener('mouseup', this.handleMoveStatus)
+    this.box = null
   }
 }
 </script>
@@ -101,7 +137,5 @@ export default {
 .modal-container {
   user-select: none;
   position: absolute;
-  width: 100px;
-  height: 100px;
 }
 </style>
