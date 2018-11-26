@@ -1,28 +1,58 @@
 <template>
   <!-- 可兼容多个窗口时的拖拽 -->
   <div class="modal-container" @click="setIndex" :style="{zIndex: active?index + 1:index-1}">
-    <slot></slot>
+
+    <div v-if="modal" class="modal-box">
+      <div class="modal-box-title">
+        <div class="detail">{{title}}</div>
+        <div class="close iconfont icon-close1" @click="close"></div>
+        <div class="scale iconfont icon-reduce" @click="changeContext"></div>
+      </div>
+      <div class="modal-context-box" :style="boxPosition">
+        <slot name="context"></slot>
+        <slot name="footer"></slot>
+      </div>
+    </div>
+
+    <slot v-else></slot>
   </div>
 </template>
 <script>
 /**
  * boxSize 可拖拽区域大小,该大小相较于父元素而言
- * areaClassname 可拖拽的区域的classname,为该组件的父级元素 
+ * modal 是否加模态框
+ * onlySlot 不使用组件模态框
+ * title 标题
  * index 设置的z-index
  * active 是否为焦点窗口
  * position 窗口默认显示位置
  * $emit('setzIndex') 触发点击事件
+ * $emit('close') 关闭窗口
  */
 export default {
-  data () {
+  data() {
     return {
       box: null,
       isMove: false,
       positionX: 0,
-      positionY: 0
+      positionY: 0,
+      isShow: true,
+      boxPosition: null
     }
   },
   props: {
+    modal: {
+      type: Boolean,
+      default: false
+    },
+    onlySlot: {
+      type: Boolean,
+      default: false
+    },
+    title: {
+      type: String,
+      default: '标题'
+    },
     boxSize: {
       type: Object,
       default: () => {
@@ -31,10 +61,6 @@ export default {
           height: 0
         }
       }
-    },
-    areaClassname: {
-      type: String,
-      default: ''
     },
     // 根据 active 和 index 来设置 z-index 值
     index: {
@@ -49,26 +75,38 @@ export default {
       type: Object,
       default: () => {
         return {
-          left: 0,
-          right: 0
+          left: 690,
+          top: 80
         }
       }
     }
   },
-  mounted () {
-    this.box = this.$parent.$el.querySelector('.' + this.areaClassname)
+  mounted() {
     if (this.position) {
       this.$el.style.left = this.position.left + 'px'
       this.$el.style.top = this.position.top + 'px'
     }
-    this.move()
+    if (this.onlySlot) {
+      this.box = this.$el
+      this.move()
+    }
+    if (this.modal) {
+      this.titleMove()
+    } 
+  },
+  watch: {
+    modal() {
+      if (this.modal) {
+        this.titleMove()
+      } else {
+        this.removeListener()
+      }
+    }
   },
   computed: {
     boxW() {
       if (this.boxSize.width && this.boxSize.height) {
         return this.boxSize.width
-      } else if (this.box) {
-        return this.box.clientWidth
       } else {
         return window.innerWidth
       }
@@ -76,34 +114,41 @@ export default {
     boxH() {
       if (this.boxSize.width && this.boxSize.height) {
         return this.boxSize.height
-      } else if (this.box) {
-        return this.box.clientHeight
       } else {
-        return window.innerHeight - 72
+        return window.innerHeight
       }
     }
   },
   methods: {
-    setIndex () {
+    setIndex() {
       this.$emit('setzIndex')
     },
-    move () {
-      this.isMove = false
-      this.$el.addEventListener('mousedown', this.handleMouseDown, true)
-      document.addEventListener('mousemove', this.handleMouseMove, true)
-      document.addEventListener('mouseup', this.handleMoveStatus, true)
+    titleMove() {
+      const timer = setTimeout(() => {
+        this.box = this.$el.querySelector('.modal-box-title')
+        this.move()
+        clearInterval(timer)
+      }, 1000)
     },
-    handleMouseDown (e) {
+    move() {
+      this.isMove = false
+      if (this.box) {
+        this.box.addEventListener('mousedown', this.handleMouseDown, true)
+        document.addEventListener('mousemove', this.handleMouseMove, true)
+        document.addEventListener('mouseup', this.handleMoveStatus, true)
+      }
+    },
+    handleMouseDown(e) {
       this.isMove = true
       this.$emit('setzIndex')
       this.positionX = e.clientX - parseInt(this.$el.offsetLeft)
       this.positionY = e.clientY - parseInt(this.$el.offsetTop)
     },
-    handleMouseMove (e) {
+    handleMouseMove(e) {
       if (this.isMove) {
         e = window.event || e
-        const tarW = this.$el.scrollWidth
-        const tarH = this.$el.scrollHeight
+        const tarW = this.$el.offsetWidth || this.$el.scrollWidth
+        const tarH = this.$el.offsetHeight || this.$el.scrollHeight
         var left = e.clientX - this.positionX
         var top = e.clientY - this.positionY
         if (left <= 0) {
@@ -120,22 +165,81 @@ export default {
         this.$el.style.top = top + 'px'
       }
     },
-    handleMoveStatus () {
+    handleMoveStatus() {
       this.isMove = false
+    },
+    close() {
+      this.isShow = true
+      this.$emit('close')
+    },
+    changeContext() {
+      this.isShow = !this.isShow
+      if (this.isShow) {
+        this.boxPosition = null
+      } else {
+        this.boxPosition = {
+          position: 'absolute',
+          top: '-9999px',
+          right: '-9999px',
+          height: '0px'
+        }
+      }
+    },
+    removeListener() {
+      if (this.box) {
+        this.box.removeEventListener('mousedown', this.handleMouseDown)
+        document.removeEventListener('mousemove', this.handleMouseMove)
+        document.removeEventListener('mouseup', this.handleMoveStatus)
+      }
     }
   },
-  beforeDestroy () {
-    this.$el.removeEventListener('mousedown', this.handleMouseDown)
-    document.removeEventListener('mousemove', this.handleMouseMove)
-    document.removeEventListener('mouseup', this.handleMoveStatus)
-    this.box = null
+  beforeDestroy() {
+    this.removeListener()
   }
 }
 </script>
 <style scoped>
-
 .modal-container {
   user-select: none;
-  position: absolute;
+  position: fixed;
+}
+
+.modal-container * {
+  user-select: none;
+}
+.modal-box {
+  color: #fff;
+  font-size: 12px;
+  background-color: #1c3053;
+  border-radius: 5px;
+}
+
+.modal-box-title {
+  height: 40px;
+  line-height: 40px;
+  width: 100%;
+  text-align: center;
+  clear: both;
+  border-radius: 5px;
+  background-color: rgb(1, 21, 50);
+  cursor: move;
+}
+.modal-box-title .detail {
+  float: left;
+  margin: 0 10px;
+}
+
+.modal-box-title .close {
+  float: right;
+  margin: 0 10px;
+  cursor: pointer;
+}
+.modal-box-title .scale {
+  float: right;
+  margin: 0 10px;
+  cursor: pointer;
+}
+.modal-context-box {
+  padding: 15px;
 }
 </style>
